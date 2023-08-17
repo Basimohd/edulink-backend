@@ -10,6 +10,8 @@ import { RegisterDto } from "./dtos/register.dto";
 import { loginDto } from "./dtos/login.dto";
 import { leaveApplicationDto } from "./dtos/leaveApplication.dto";
 import { updateLeaveStatusDto } from "./dtos/updateLeaveStatus.dto";
+import { fileSubmissionDto } from "./dtos/fileSubmission.dto";
+import * as request from 'request';
 
 @Controller('user')
 export class UserController {
@@ -96,13 +98,33 @@ export class UserController {
   async createLeaveApplication(@Param('id') id : string,@Body() leaveForm:leaveApplicationDto){
       return await this.userService.createLeaveApplication(id,leaveForm);
   }
+
   @Delete('deleteLeave/:userId/:leaveId')
   async deleteLeave(@Param('userId') userId : string,@Param('leaveId') leaveId : string){
       return await this.userService.deleteLeave(userId,leaveId);
   }
+
   @Patch('updateLeave')
   async updateLeaveStatus(@Body() updateData : updateLeaveStatusDto){
       return await this.userService.updateLeaveStatus(updateData);
   }
+
+  @Get('assignment/:studentId')
+  async fetchAssignmentsByDepartment(@Param('studentId') studentId : string){
+      return await this.userService.fetchAssignmentsByDepartment(studentId);
+  }
+
+  @Patch('assignment/upload-file')
+  async updateFileSubmissions(@Body() data : fileSubmissionDto){
+      return await this.userService.updateFileSubmissions(data);
+  }
+
+  @Delete('assignment/delete-file')
+  async deleteFileSubmissions(@Body() data : fileSubmissionDto){
+    console.log(data.fileUrl);
+    
+      return await this.userService.deleteFileSubmissions(data);
+  }
+
 
 }

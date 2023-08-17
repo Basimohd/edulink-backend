@@ -9,10 +9,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
 
+
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       message = exception.message;
     }
+
+    console.error('Global Exception Error:', exception);
 
     response.status(status).json({
       success: false,

@@ -15,7 +15,7 @@ import { readFileSync } from 'fs';
 import handlebars from 'handlebars';
 import { MailerService } from '@nestjs-modules/mailer';
 import { departmentDto } from './dtos/department.dto';
-import { department } from 'models/department.schema';
+import { department } from '../models/department.schema';
 import { batchDto } from './dtos/batch.dto';
 import { batch } from 'models/batch.schema';
 import { AdmissionUpdateDto } from './dtos/admissionUpdate.dto';
@@ -55,7 +55,7 @@ export class AdminService {
         throw new UnauthorizedException("email")
       }
     } catch (error) {
-      console.log(error)
+      throw new UnauthorizedException(error.message || 'Login failed');
     }
   }
 
@@ -66,7 +66,6 @@ export class AdminService {
       const admissions = await this.admissionModel.find().populate('department').exec()
       return admissions;
     } catch (error) {
-      console.log(error)
       throw new HttpException('Failed to fetch Admission Enquiries', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -85,8 +84,7 @@ export class AdminService {
         }
       }, { new: true })
     } catch (error) {
-      console.log(error);
-
+      throw new HttpException('Failed to update admission status', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -122,7 +120,7 @@ export class AdminService {
         return { facultyId: facultyId.facultyId };
       }
     } catch (error) {
-      console.log(error)
+      throw new HttpException(error.message || 'Failed to add faculty', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
   async updateFaculty(facultyDetails: UpdateFacultyDto) {
@@ -148,7 +146,7 @@ export class AdminService {
         return { facultyId: updateFaculty };
       }
     } catch (error) {
-      console.log(error)
+      throw new HttpException(error.message || 'Failed to update faculty', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -162,13 +160,18 @@ export class AdminService {
   }
 
   async addDepartment(departmentDetails: departmentDto) {
+    const departmentFound = await this.departmentModel.findOne({departmentName:departmentDetails.departmentName})
+    if(departmentFound){
+      throw new ConflictException("Department Already exists with same name");
+    }
     try {
       const department = await new this.departmentModel(departmentDetails).save();
       return department
     } catch (error) {
-
+      throw new HttpException(error.message || 'Failed to add department', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+  
   async updateDepartment(departmentDetails: departmentDto) {
     try {
       const { departmentName,description,HOD,duration,fees,professors} = departmentDetails
@@ -177,18 +180,17 @@ export class AdminService {
       })
       return department
     } catch (error) {
-      
+      throw new HttpException(error.message || 'Failed to update department', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   //Batch Management
   async fetchBatchesByDepartment(departmentId: string) {
     try {
-      console.log(departmentId)
       const batches = await this.batchModel.find({ department: departmentId })
       return batches;
     } catch (error) {
-      throw new HttpException('Failed to fetch Batches', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException('Failed to fetch batches', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -207,9 +209,10 @@ export class AdminService {
       const batch = await new this.batchModel(batchDetails).save();
       return batch;
     } catch (error) {
-      console.log(error)
+      throw new HttpException(error.message || 'Failed to add batch', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+  
   async updateBatch(batchDetails: batchDto) {
     try {
       const {batchId,department,batch,tutor,maxSeats} = batchDetails
@@ -223,18 +226,22 @@ export class AdminService {
       })
       return updateBatch;
     } catch (error) {
-      console.log(error)
+      throw new HttpException(error.message || 'Failed to update batch', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   //Mail Services
   async sendMail(facultyDetails: faculty): Promise<any> {
-    const filePath = join(__dirname, '../common/emails/facultyIdEmail.html');
+    try {
+      const filePath = join(__dirname, '../common/emails/facultyIdEmail.html');
     const htmlTemplate = readFileSync(filePath, 'utf8');
+    const facultyId =  facultyDetails._id;
     const compiledTemplate = handlebars.compile(htmlTemplate);
+    const token = await this.jwtService.signAsync({ facultyId:facultyId });
     const dynamicData = {
       name: facultyDetails.facultyName,
       registerId: facultyDetails.facultyId,
+      resetLink:`http://localhost:4200/faculty/set-password/${token}`
     };
     const htmlContent = compiledTemplate(dynamicData);
 
@@ -243,12 +250,15 @@ export class AdminService {
       .sendMail({
         to: facultyDetails.email,
         from: 'edulinkschoolofficial@gmail.com',
-        subject: 'Edulink Register ID',
+        subject: 'Edulink Registration',
         text: '',
         html: htmlContent,
       })
 
     return { facultyId: facultyDetails._id };
+    } catch (error) {
+      throw new HttpException(error.message || 'Failed to send email', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
 }

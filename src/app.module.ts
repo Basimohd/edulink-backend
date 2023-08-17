@@ -25,7 +25,7 @@ import { FacultyModule } from './faculty/faculty.module';
     JwtModule.register({
       global: true,
       secret: "jwtSecret",
-      signOptions: { expiresIn: '7d' },
+      signOptions: { expiresIn: '3d' },
     }),
     
   ]

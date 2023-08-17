@@ -7,6 +7,7 @@ import { otpSchema } from '../models/otp.schema';
 import { studentSchema } from '../models/student.schema';
 import { departmentSchema } from '../models/department.schema';
 import { batchSchema } from '../models/batch.schema';
+import { assignmentSchema } from '../models/assignment.schema';
 
 @Module({
     imports:[MongooseModule.forFeature([
@@ -15,6 +16,7 @@ import { batchSchema } from '../models/batch.schema';
         {name:'students',schema:studentSchema},
         {name:'department',schema:departmentSchema},
         {name:'batch',schema:batchSchema},
+        {name:'assignment',schema:assignmentSchema},
     ]),],
     providers:[UserService],
     controllers:[UserController]

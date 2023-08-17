@@ -1,6 +1,6 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import mongoose, { Model, Types, ObjectId } from 'mongoose';
 import { CreateAdmissionDto } from './dtos/admission.dto';
 import { Admission } from 'models/admission.schema';
 import { RegisterDto } from './dtos/register.dto';
@@ -21,6 +21,8 @@ import { feePaymentDetail } from 'common/interfaces/feePayment.interface';
 import { batch } from 'models/batch.schema';
 import { leaveApplicationDto } from './dtos/leaveApplication.dto';
 import { updateLeaveStatusDto } from './dtos/updateLeaveStatus.dto';
+import { assignment } from 'models/assignment.schema';
+import { fileSubmissionDto } from './dtos/fileSubmission.dto';
 const stripe = require('stripe')('sk_test_51NZz4dSBX5PVkKd67VpWUNx6INzyDEGDefvjD5LWhBLIhfaXYty48GXYa9aUFa5sDV4RYx0sQZbFfgwScvJcw3Oq00mYsXh5m1');
 
 @Injectable()
@@ -31,6 +33,7 @@ export class UserService {
         @InjectModel('otp') private readonly otpModel: Model<otp>,
         @InjectModel('students') private readonly studentModel: Model<student>,
         @InjectModel('batch') private readonly batchModel: Model<batch>,
+        @InjectModel('assignment') private readonly assignmentModel: Model<assignment>,
         private mailerService: MailerService,
         private jwtService: JwtService
     ) {
@@ -55,7 +58,7 @@ export class UserService {
 
             }
         } catch (error) {
-            console.log(error)
+            throw new HttpException('Failed to create admission', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -94,7 +97,7 @@ export class UserService {
                 return { userId: userId.userId };
             }
         } catch (error) {
-            console.log(error)
+            throw new HttpException('Failed to create user', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -152,13 +155,12 @@ export class UserService {
 
             return { userId: studentDetails._id };
         } catch (error) {
-            console.log(error)
+            throw new HttpException('Failed to send OTP email', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     async verifyOtp(otpDetails: optDto): Promise<boolean> {
         try {
-            console.log(otpDetails)
             const { otp, userId } = otpDetails
             const otpData = await this.otpModel.findOne({ userId: new Types.ObjectId(userId) })
             const isMatch = await bcrypt.compare(otp, otpData.otp);
@@ -169,20 +171,17 @@ export class UserService {
             }
             return isMatch;
         } catch (error) {
-            console.log(error)
+            throw new HttpException('Failed to verify OTP', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     async verifyLogin(details: loginDto): Promise<any> {
         try {
-            console.log(details)
             const data = await this.studentModel.findOne({ email: { $regex: new RegExp(details.email, "i") } })
-            console.log(data)
             if (data) {
                 if (data.isVerified) {
                     const paylaod = { sub: data._id, email: data.email }
                     const token = await this.jwtService.signAsync(paylaod)
-                    console.log(token)
                     const verifyPass = await bcrypt.compare(details.password, data.password)
                     if (verifyPass) {
                         return { token: token, id: data._id, data: data }
@@ -197,7 +196,7 @@ export class UserService {
                 throw new UnauthorizedException("email")
             }
         } catch (error) {
-            console.log(error)
+            throw new UnauthorizedException(error.message);
         }
     }
 
@@ -212,11 +211,9 @@ export class UserService {
                     },
                 }).populate('department')
                 .exec();
-            console.log(user)
             return user;
         } catch (error) {
-            console.log(error)
-            throw new Error('Failed to fetch user details.');
+            throw new HttpException('Failed to fetch user details.', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -230,7 +227,6 @@ export class UserService {
             });
 
             const payload: TokenPayload | undefined = ticket.getPayload();
-            console.log(payload)
             if (!payload) {
                 throw new BadRequestException('Invalid Google token');
             }
@@ -256,10 +252,8 @@ export class UserService {
 
             const paylaod = { sub: data._id, email: data.email }
             const token = await this.jwtService.signAsync(paylaod)
-            console.log(token, data._id, data)
             return { token: token, id: data._id, data: data }
         } catch (error) {
-            console.log(error)
             throw new BadRequestException('Invalid Google token');
         }
     }
@@ -290,8 +284,7 @@ export class UserService {
             });
             return { id: session.id }
         } catch (error) {
-            console.log(error);
-
+           throw new HttpException('Failed to create checkout session', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -304,7 +297,6 @@ export class UserService {
                 'whsec_5e373ea036e290ead9dfc698789d642521940e44a3fe6e9f50e09b3b51cf2d1e'
             );
             const saveFeePayment = async (session: any) => {
-                console.log("saved")
                 let paymentDetails: feePaymentDetail = {
                     year: Number(session.metadata.year),
                     amountPaid: session.amount_total / 100,
@@ -318,7 +310,6 @@ export class UserService {
 
             const emailCustomerAboutFailedPayment = (session) => {
                 // If Failed Send Email About Failed
-                console.log("Emailing customer");
             }
             switch (event.type) {
                 case 'checkout.session.completed': {
@@ -349,13 +340,11 @@ export class UserService {
        try{
         const batch = await this.batchModel.findOne({tutor:facultyId}).populate('department').exec()
         if(batch){
-            console.log(batch);
             const students = await this.studentModel
             .find({ batch: batch._id })
             .populate('admssionDetails')
             .sort({ 'admssionDetails.firstName': 1 })
             .exec();
-            console.log(students);
             
             if(students){
                 return {students,batch};
@@ -366,31 +355,30 @@ export class UserService {
             throw new NotFoundException(`You are not a Tutor of any Batch`);
         }
        }catch(error){
-        console.log(error)
+        throw new NotFoundException(error.message || 'Failed to fetch students by department');
        }
     }
 
     async createLeaveApplication(id:string,leaveForm:leaveApplicationDto){
         try{
-            console.log(leaveForm)
             return await this.studentModel.findByIdAndUpdate(id,{
                 $push:{leaveApplications:leaveForm}
             })
         }catch(error){
-            console.log(error)
+            throw new HttpException('Failed to create leave application', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
     async deleteLeave(userId:string,leaveId:string){
-        console.log(userId,leaveId)
         try {
             return await this.studentModel.findByIdAndUpdate(userId,{
                 $pull:{leaveApplications:{ _id: leaveId }}
             })
         } catch (error) {
-            console.log(error);
-            
+            throw new HttpException('Failed to delete leave', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
     async updateLeaveStatus(updateData:updateLeaveStatusDto){
         try {
             const {studentId,leaveId,status} = updateData
@@ -399,7 +387,78 @@ export class UserService {
                 { $set: { 'leaveApplications.$.status': status } },
               );
         } catch (error) {
-            
+             throw new HttpException('Failed to update leave status', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async fetchAssignmentsByDepartment(studentId:string){
+        try {
+            const studentDetail = await this.studentModel.findById(studentId)
+            if(!studentDetail){
+                return
+            }
+            return await this.assignmentModel.find({department:studentDetail.department}).populate('facultyId department')
+        } catch (error) {
+             throw new HttpException('Failed to fetch assignments by department', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async updateFileSubmissions(data : fileSubmissionDto){
+        try {
+            const { fileUrl, studentId, assignmentId } = data;
+            const assignment = await this.assignmentModel.findById(assignmentId);
+            const studnetData = await this.studentModel.findById(studentId)
+            if (!assignment) {
+                return { success: false, message: 'Assignment not found' };
+            }
+            const submissionIndex = assignment.submissions.findIndex(submission => submission.studentId.toString() === studentId);
+
+            if (submissionIndex === -1) {
+                assignment.submissions.push({
+                    studentId: studnetData._id,
+                    fileUrl: [fileUrl],
+                    grade: 0,
+                    isGraded:false,
+                    lastUpdated:new Date()
+                });
+            } else {
+                assignment.submissions[submissionIndex].fileUrl.push(fileUrl);
+            }
+            await assignment.save();
+
+            return { success: true, message: 'File URL updated successfully' };
+        } catch (error) {
+            return { success: false, message: 'An error occurred' };
+        }
+    }
+
+    async deleteFileSubmissions(data: fileSubmissionDto) {
+        try {
+            const { fileUrl, studentId, assignmentId } = data;
+            const assignment = await this.assignmentModel.findById(assignmentId);
+            if (!assignment) {
+                return { success: false, message: 'Assignment not found' };
+            }
+    
+            const submissionIndex = assignment.submissions.findIndex(submission => submission.studentId.toString() === studentId);
+    
+            if (submissionIndex === -1) {
+                return { success: false, message: 'Submission not found' };
+            }
+    
+            const submission = assignment.submissions[submissionIndex];
+            const fileUrlIndex = submission.fileUrl.indexOf(fileUrl);
+    
+            if (fileUrlIndex === -1) {
+                return { success: false, message: 'File URL not found in submissions' };
+            }
+    
+            submission.fileUrl.splice(fileUrlIndex, 1);
+            await assignment.save();
+    
+            return { success: true, message: 'File URL deleted successfully' };
+        } catch (error) {
+            return { success: false, message: 'An error occurred' };
         }
     }
 }
