@@ -6,6 +6,9 @@ import { facultySchema } from '../models/faculty.schema';
 import { studentSchema } from '../models/student.schema';
 import { departmentSchema } from '../models/department.schema';
 import { assignmentSchema } from '../models/assignment.schema';
+import { batchSchema } from '../models/batch.schema';
+import { communityChatSchema } from '../models/community-chat.schema';
+import { groupChatSchema } from '../models/group-chat.schema';
 
 @Module({
     imports:[MongooseModule.forFeature([
@@ -13,6 +16,9 @@ import { assignmentSchema } from '../models/assignment.schema';
         {name:'students',schema:studentSchema},
         {name:'department',schema:departmentSchema},
         {name:'assignment',schema:assignmentSchema},
+        {name:'batch',schema:batchSchema},
+        {name:'communityChat',schema:communityChatSchema},
+        {name:'groupChat',schema:groupChatSchema},
     ]),],
     providers:[FacultyService],
     controllers:[FacultyController]

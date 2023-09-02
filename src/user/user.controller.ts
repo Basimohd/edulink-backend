@@ -9,14 +9,17 @@ import { optDto } from "./dtos/otp.dto";
 import { RegisterDto } from "./dtos/register.dto";
 import { loginDto } from "./dtos/login.dto";
 import { leaveApplicationDto } from "./dtos/leaveApplication.dto";
-import { updateLeaveStatusDto } from "./dtos/updateLeaveStatus.dto";
+import { updateLeaveStatusDto } from "../faculty/dtos/updateLeaveStatus.dto";
 import { fileSubmissionDto } from "./dtos/fileSubmission.dto";
 import * as request from 'request';
+import { groupType } from "../chat/interfaces/messageDetails.interface";
+import { createGroupDto } from "./dtos/createGroup.dto";
 
 @Controller('user')
 export class UserController {
   constructor(private userService: UserService,) { }
 
+  
   @Post('/webhook')
   async handleWebhook(@Req() req: RawBodyRequest<Request>, @Headers('stripe-signature') signature: string) {
     const payload = req.rawBody;
@@ -26,6 +29,11 @@ export class UserController {
   @Post('register')
   async createUser(@Body() registerForm:RegisterDto){
       return await this.userService.createUser(registerForm);
+  }
+
+  @Get('homeCount')
+  async gethomeCount(){
+      return await this.userService.gethomeCount();
   }
   
   @Post('verifyOtp')
@@ -85,29 +93,19 @@ export class UserController {
     return this.userService.loginWithGoogle(credential)
   }
 
-  @Get('students/:facultyId')
-  async fetchStudentsByDepartment(@Param('facultyId') facultyId: string){
-    try {
-      return await this.userService.fetchStudentsByDepartment(facultyId)
-    } catch (error) {
-      console.log(error);
-    }
-  }
 
   @Post('leaveApplication/:id')
   async createLeaveApplication(@Param('id') id : string,@Body() leaveForm:leaveApplicationDto){
       return await this.userService.createLeaveApplication(id,leaveForm);
   }
 
+
   @Delete('deleteLeave/:userId/:leaveId')
   async deleteLeave(@Param('userId') userId : string,@Param('leaveId') leaveId : string){
       return await this.userService.deleteLeave(userId,leaveId);
   }
 
-  @Patch('updateLeave')
-  async updateLeaveStatus(@Body() updateData : updateLeaveStatusDto){
-      return await this.userService.updateLeaveStatus(updateData);
-  }
+
 
   @Get('assignment/:studentId')
   async fetchAssignmentsByDepartment(@Param('studentId') studentId : string){
@@ -126,5 +124,29 @@ export class UserController {
       return await this.userService.deleteFileSubmissions(data);
   }
 
+  @Get('chat/communities/:studentId')
+  async getCommunities(@Param('studentId') studnetId:string){
+      return await this.userService.getCommunities(studnetId)
+  }
+
+  @Get('chat/groups/:studentId')
+  async getGroups(@Param('studentId') studnetId:string){
+      return await this.userService.getGroups(studnetId)
+  }
+
+  @Get('studentAndFaculty/:studentId')
+  async getFacultiesAndStudentByDepartment(@Param('studentId') studnetId:string){
+      return await this.userService.getFacultiesAndStudentByDepartment(studnetId)
+  }
+
+  @Get('chat/messages/:groupId/:groupType')
+  async getMessages(@Param('groupId') groupId:string,@Param('groupType') groupType:groupType){
+      return await this.userService.getMessages(groupId,groupType)
+  }
+
+  @Post('addGroup')
+  async addGroup(@Body() groupForm:createGroupDto){
+      return await this.userService.addGroup(groupForm);
+  }
 
 }

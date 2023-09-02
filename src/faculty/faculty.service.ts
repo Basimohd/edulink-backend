@@ -1,4 +1,4 @@
-import { ConflictException, HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { ConflictException, HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { RegisterDto } from "./dtos/register.dto";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
@@ -11,6 +11,11 @@ import { student } from "models/student.schema";
 import { department } from "models/department.schema";
 import { AssignmentDto } from "./dtos/assingment.dto";
 import { AssignmentStatus, assignment, assignmentDetailType } from "../common/interfaces/assignment.interface";
+import { updateLeaveStatusDto } from "./dtos/updateLeaveStatus.dto";
+import { batch } from "models/batch.schema";
+import { groupChat } from "models/group-chat.schema";
+import { communityChat } from "models/community-chat.schema";
+import { updateGroupStatusDto } from "./dtos/updateGroupStaus.dto";
 
 
 @Injectable()
@@ -20,9 +25,23 @@ export class FacultyService {
         @InjectModel('students') private readonly studentsModel: Model<student>,
         @InjectModel('department') private readonly departmentModel: Model<department>,
         @InjectModel('assignment') private readonly assignmentModel: Model<assignment>,
+        @InjectModel('batch') private readonly batchModel: Model<batch>,
+        @InjectModel('communityChat') private readonly communityChatModel: Model<communityChat>,
+        @InjectModel('groupChat') private readonly groupChatModel: Model<groupChat>,
         private jwtService: JwtService
     ) { }
     
+
+    async getFacultyData(facultyId:string){
+        try {
+            const facultyData = await this.facultyModel.findById(facultyId)
+            if(facultyData){
+                return facultyData
+            }
+        } catch (error) {
+            
+        }
+    }
     //Faculty Auth
     async setPassword(registerForm: RegisterDto): Promise<any> {
         try {
@@ -121,6 +140,42 @@ export class FacultyService {
         }
     }
 
+    async fetchStudentsByDepartment(facultyId: string) {
+        try{
+         const batch = await this.batchModel.findOne({tutor:facultyId}).populate('department').exec()
+         if(batch){
+             const students = await this.studentsModel
+             .find({ batch: batch._id })
+             .populate('admssionDetails')
+             .sort({ 'admssionDetails.firstName': 1 })
+             .exec();
+             
+             if(students){
+                 return {students,batch};
+             }else{
+                 throw new NotFoundException('No Students found')
+             }
+         }else{
+             throw new NotFoundException(`You are not a Tutor of any Batch`);
+         }
+        }catch(error){
+         throw new NotFoundException(error.message || 'Failed to fetch students by department');
+        }
+     }
+
+     
+    async updateLeaveStatus(updateData:updateLeaveStatusDto){
+        try {
+            const {studentId,leaveId,status} = updateData
+            return await this.studentsModel.updateOne(
+                { _id: studentId, 'leaveApplications._id': leaveId },
+                { $set: { 'leaveApplications.$.status': status } },
+              );
+        } catch (error) {
+             throw new HttpException('Failed to update leave status', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     //Assignment Management
     async fetchAssignments(facultyId: string) {
         try {
@@ -202,4 +257,67 @@ export class FacultyService {
         d2.setUTCHours(0, 0, 0, 0);
         return d1.getTime() === d2.getTime();
     }
+
+    //Chat Management
+    async getCommunities(facultyId:string){
+        try {
+            const departmentIds = await this.departmentModel.find({ $or: [
+                { HOD: facultyId },
+                { professors: facultyId }
+            ]}).select('_id');
+            const departmentIdArray = departmentIds.map(department => department._id);
+            const communitiesWithMatchingDepartments = await this.communityChatModel.find({
+                departmentId: { $in: departmentIdArray },
+              }).populate({
+                path: 'departmentId',
+              }).populate({
+                path: 'messages',
+                populate: [
+                    { path: 'studentSender' ,model:'students',populate:[{
+                        path:'admssionDetails',
+                        model:'admissionEnquiry'
+                    }]},
+                    { path: 'facultySender' ,model:'faculty'}
+                ]
+              });
+            console.log(communitiesWithMatchingDepartments);
+            return communitiesWithMatchingDepartments;
+            
+        } catch (error) {
+            console.log(error);
+            
+        }
+    }
+    async getGroups(facultyId:string){
+        try {
+            const groups =  await this.groupChatModel.find({ facultyParticipants: { $in: [facultyId] } }).populate({
+                path: 'messages',
+                populate: [
+                    { path: 'studentSender' ,model:'students',populate:[{
+                        path:'admssionDetails',
+                        model:'admissionEnquiry'
+                    }]},
+                    { path: 'facultySender' ,model:'faculty'}
+                ]
+              });
+            return groups;
+        } catch (error) {
+            console.log(error);
+            
+        }
+    }
+
+    async updateGroupStatus(updateData:updateGroupStatusDto){
+        try {
+            const {groupId,status} = updateData
+            return await this.groupChatModel.updateOne(
+                { _id: groupId },
+                { $set: { isApproved: status } },
+              );
+        } catch (error) {
+             throw new HttpException('Failed to update leave status', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    
 }

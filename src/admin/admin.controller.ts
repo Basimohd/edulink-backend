@@ -33,6 +33,15 @@ export class AdminController {
     return await this.adminService.updateAdmissionStatus(id, admissionUpdateDto)
   }
 
+  //Student Management
+  @Get('students')
+  async fetchStudents() {
+    const students = await this.adminService.fetchAllStudents();
+    console.log(students);
+    
+    return { students }
+  }
+
   //Faculty Management
   @Get('faculties')
   async fetchFaculties() {

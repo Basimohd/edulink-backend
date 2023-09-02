@@ -1,4 +1,4 @@
-import { leaveApplicationStatus } from "../../common/enums/leave-status.enum";
+import { CommonStatus } from "../../common/enums/leave-status.enum";
 
 export interface assignment {
     facultyId: String;

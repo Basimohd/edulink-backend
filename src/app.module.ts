@@ -6,10 +6,13 @@ import { AuthMiddleware } from './common/middlewares/auth.middleware';
 import { UserModule } from './user/user.module';
 import { AdminModule } from './admin/admin.module';
 import { FacultyModule } from './faculty/faculty.module';
+import { ChatModule } from './chat/chat.module';
+import * as dotenv from 'dotenv'
 
+dotenv.config()
 @Module({
   imports: [
-    MongooseModule.forRoot('mongodb://127.0.0.1:27017/school-management'),
+    MongooseModule.forRoot(process.env.DB_CONNECTION_STRING),
     UserModule,
     AdminModule,
     FacultyModule,
@@ -17,16 +20,17 @@ import { FacultyModule } from './faculty/faculty.module';
       transport: {
         host: 'smtp.gmail.com',
         auth: {
-          user: 'edulinkschoolofficial@gmail.com',
-          pass: 'rvdyuzkcjgcbnird'
+          user: process.env.MAIL_ID,
+          pass: process.env.MAIL_PASSWORD
         }
       }
     }),
     JwtModule.register({
       global: true,
-      secret: "jwtSecret",
-      signOptions: { expiresIn: '3d' },
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '7d' },
     }),
+    ChatModule,
     
   ]
 })
@@ -41,6 +45,7 @@ export class AppModule implements NestModule {
         { path: 'admin/login', method: RequestMethod.POST },
         { path: 'user/loginWithGoogle', method: RequestMethod.POST },
         { path: 'user/webhook', method: RequestMethod.POST },
+        { path: 'user/homeCount', method: RequestMethod.GET },
         { path: 'faculty/register', method: RequestMethod.POST },
         { path: 'faculty/login', method: RequestMethod.POST },
       )

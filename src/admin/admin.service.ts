@@ -21,6 +21,7 @@ import { batch } from 'models/batch.schema';
 import { AdmissionUpdateDto } from './dtos/admissionUpdate.dto';
 import { student } from 'models/student.schema';
 import { UpdateFacultyDto } from './dtos/upadateFaculty.dto';
+import { communityChat } from 'models/community-chat.schema';
 
 @Injectable()
 export class AdminService {
@@ -32,6 +33,7 @@ export class AdminService {
     @InjectModel('department') private readonly departmentModel: Model<department>,
     @InjectModel('batch') private readonly batchModel: Model<batch>,
     @InjectModel('students') private readonly studentModel: Model<student>,
+    @InjectModel('communityChat') private readonly communityChatModel: Model<communityChat>,
     private mailerService: MailerService,
     private jwtService: JwtService
   ) { }
@@ -87,6 +89,20 @@ export class AdminService {
       throw new HttpException('Failed to update admission status', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  //Student Management
+  async fetchAllStudents() {
+    try {
+      return await this.studentModel.find({
+        batch: { $exists: true },
+        department: { $exists: true },
+      }).populate('admssionDetails department batch').exec()
+
+    } catch (error) {
+      throw new HttpException('Failed to fetch faculties', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
 
   //Faculty Management
   async fetchAllFaculties() {
@@ -166,6 +182,10 @@ export class AdminService {
     }
     try {
       const department = await new this.departmentModel(departmentDetails).save();
+      const commuintyDetails = {
+        departmentId:department._id,
+      }
+      await new this.communityChatModel(commuintyDetails).save()
       return department
     } catch (error) {
       throw new HttpException(error.message || 'Failed to add department', HttpStatus.INTERNAL_SERVER_ERROR);
@@ -233,7 +253,7 @@ export class AdminService {
   //Mail Services
   async sendMail(facultyDetails: faculty): Promise<any> {
     try {
-      const filePath = join(__dirname, '../common/emails/facultyIdEmail.html');
+    const filePath = join(__dirname, '../common/emails/facultyIdEmail.html');
     const htmlTemplate = readFileSync(filePath, 'utf8');
     const facultyId =  facultyDetails._id;
     const compiledTemplate = handlebars.compile(htmlTemplate);
@@ -241,10 +261,9 @@ export class AdminService {
     const dynamicData = {
       name: facultyDetails.facultyName,
       registerId: facultyDetails.facultyId,
-      resetLink:`http://localhost:4200/faculty/set-password/${token}`
+      resetLink:`${process.env.FRONTEND_URL}/faculty/set-password/${token}`
     };
     const htmlContent = compiledTemplate(dynamicData);
-
 
     await this.mailerService
       .sendMail({

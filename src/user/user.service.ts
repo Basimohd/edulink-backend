@@ -20,9 +20,16 @@ import { Stripe } from 'stripe';
 import { feePaymentDetail } from 'common/interfaces/feePayment.interface';
 import { batch } from 'models/batch.schema';
 import { leaveApplicationDto } from './dtos/leaveApplication.dto';
-import { updateLeaveStatusDto } from './dtos/updateLeaveStatus.dto';
+import { updateLeaveStatusDto } from '../faculty/dtos/updateLeaveStatus.dto';
 import { assignment } from 'models/assignment.schema';
 import { fileSubmissionDto } from './dtos/fileSubmission.dto';
+import { communityChat } from 'models/community-chat.schema';
+import { department } from 'models/department.schema';
+import { groupType } from "../chat/interfaces/messageDetails.interface";
+import { groupChat } from 'models/group-chat.schema';
+import { createGroupDto } from './dtos/createGroup.dto';
+import { admissionStatus } from './enums/admissionStatus.enum';
+import { faculty } from 'models/faculty.schema';
 const stripe = require('stripe')('sk_test_51NZz4dSBX5PVkKd67VpWUNx6INzyDEGDefvjD5LWhBLIhfaXYty48GXYa9aUFa5sDV4RYx0sQZbFfgwScvJcw3Oq00mYsXh5m1');
 
 @Injectable()
@@ -34,14 +41,29 @@ export class UserService {
         @InjectModel('students') private readonly studentModel: Model<student>,
         @InjectModel('batch') private readonly batchModel: Model<batch>,
         @InjectModel('assignment') private readonly assignmentModel: Model<assignment>,
+        @InjectModel('communityChat') private readonly communityChatModel: Model<communityChat>,
+        @InjectModel('groupChat') private readonly groupChatModel: Model<groupChat>,
+        @InjectModel('department') private readonly departmentModel: Model<department>,
+    @InjectModel('faculty') private readonly facultyModel: Model<faculty>,
         private mailerService: MailerService,
         private jwtService: JwtService
     ) {
         this.stripe = new Stripe('sk_test_51NZz4dSBX5PVkKd67VpWUNx6INzyDEGDefvjD5LWhBLIhfaXYty48GXYa9aUFa5sDV4RYx0sQZbFfgwScvJcw3Oq00mYsXh5m1', {
-            apiVersion: '2022-11-15', // You can use the latest API version available
+            apiVersion: '2022-11-15',
         })
     }
 
+    async gethomeCount(){
+        try {
+            const studentCount = (await this.admissionModel.find({admissionStatus:admissionStatus.APPROVED})).length
+            const facultyCount = (await this.facultyModel.find({isBlocked:false})).length
+            const departmentCount = (await this.departmentModel.find()).length
+            const batchCount = (await this.batchModel.find()).length
+            return {studentCount,facultyCount,departmentCount,batchCount}
+        } catch (error) {
+            
+        }
+    }
     async createAdmission(admissionEnquiry: CreateAdmissionDto, userId: string): Promise<any> {
         try {
             const admissionId = this.generateAdmissionId();
@@ -336,28 +358,7 @@ export class UserService {
         return 'success';
     }
 
-    async fetchStudentsByDepartment(facultyId: string) {
-       try{
-        const batch = await this.batchModel.findOne({tutor:facultyId}).populate('department').exec()
-        if(batch){
-            const students = await this.studentModel
-            .find({ batch: batch._id })
-            .populate('admssionDetails')
-            .sort({ 'admssionDetails.firstName': 1 })
-            .exec();
-            
-            if(students){
-                return {students,batch};
-            }else{
-                throw new NotFoundException('No Students found')
-            }
-        }else{
-            throw new NotFoundException(`You are not a Tutor of any Batch`);
-        }
-       }catch(error){
-        throw new NotFoundException(error.message || 'Failed to fetch students by department');
-       }
-    }
+
 
     async createLeaveApplication(id:string,leaveForm:leaveApplicationDto){
         try{
@@ -379,17 +380,6 @@ export class UserService {
         }
     }
 
-    async updateLeaveStatus(updateData:updateLeaveStatusDto){
-        try {
-            const {studentId,leaveId,status} = updateData
-            return await this.studentModel.updateOne(
-                { _id: studentId, 'leaveApplications._id': leaveId },
-                { $set: { 'leaveApplications.$.status': status } },
-              );
-        } catch (error) {
-             throw new HttpException('Failed to update leave status', HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 
     async fetchAssignmentsByDepartment(studentId:string){
         try {
@@ -397,7 +387,10 @@ export class UserService {
             if(!studentDetail){
                 return
             }
-            return await this.assignmentModel.find({department:studentDetail.department}).populate('facultyId department')
+            const haha =  await this.assignmentModel.find({department:studentDetail.department}).populate('facultyId department')
+            console.log(haha);
+            return haha
+            
         } catch (error) {
              throw new HttpException('Failed to fetch assignments by department', HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -459,6 +452,112 @@ export class UserService {
             return { success: true, message: 'File URL deleted successfully' };
         } catch (error) {
             return { success: false, message: 'An error occurred' };
+        }
+    }
+    async getCommunities(studentId:string){
+        try {
+            const department = await this.studentModel.findById(studentId);            
+            if(!department){
+                return
+            }
+            const communities =  await this.communityChatModel.findOne({departmentId:department.department}).populate({
+                path: 'departmentId',
+              }).populate({
+                path: 'messages',
+                populate: [
+                    { path: 'studentSender' ,model:'students',populate:[{
+                        path:'admssionDetails',
+                        model:'admissionEnquiry'
+                    }]},
+                    { path: 'facultySender' ,model:'faculty'}
+                ]
+              });
+            return communities;
+        } catch (error) {
+            console.log(error);
+            
+        }
+    }
+    
+    async getGroups(studentId:string){
+        try {
+            const groups =  await this.groupChatModel.find({ studentParticipants: { $in: [studentId] } }).populate({
+                path: 'messages',
+                populate: [
+                    { path: 'studentSender' ,model:'students',populate:[{
+                        path:'admssionDetails',
+                        model:'admissionEnquiry'
+                    }]},
+                    { path: 'facultySender' ,model:'faculty'}
+                ]
+              });
+            return groups;
+        } catch (error) {
+            console.log(error);
+            
+        }
+    }
+
+    async getMessages(groupId:string,type:groupType){
+        try {
+            let messages = [];
+            if(type == groupType.COMMUNITY){
+                const community = await this.communityChatModel.findById(groupId).populate({
+                    path: 'messages',
+                    model:'messages',
+                    populate: [
+                        { path: 'studentSender' ,model:'students',populate:[{
+                            path:'admssionDetails',
+                            model:'admissionEnquiry'
+                        }]},
+                        { path: 'facultySender' ,model:'faculty'}
+                    ]
+                });
+                messages = community.messages
+            }else{
+                const group = await this.groupChatModel.findById(groupId).populate({
+                    path: 'messages',
+                    populate: [
+                        { path: 'studentSender' ,model:'students',populate:[{
+                            path:'admssionDetails',
+                            model:'admissionEnquiry'
+                        }]},
+                        { path: 'facultySender' ,model:'faculty'}
+                    ]
+                });
+                messages = group.messages
+            }
+            return messages;
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    async getFacultiesAndStudentByDepartment(studentId:string){
+        try{
+            const studentDetails = await this.studentModel.findById(studentId)
+            if(studentDetails){
+                const studentList = await this.studentModel.find({department:studentDetails.department})
+                const facultyList = await this.departmentModel.find({_id:studentDetails.department}).populate('HOD')
+                .populate('professors')
+                .exec();
+                return {studentList,facultyList}
+            }
+        }catch(error){
+            console.log(error);
+            
+        }
+    }
+    async addGroup(groupForm:createGroupDto){
+        try{
+            const groupCrete = new this.groupChatModel(groupForm)
+            const groupAdded = await groupCrete.save()
+            const addToCommunity = await this.communityChatModel.updateOne({_id:groupForm.communityId},{
+                $push:{groups:groupAdded._id}
+            })
+            return addToCommunity;
+        }catch(error){
+            console.log(error);
         }
     }
 }
