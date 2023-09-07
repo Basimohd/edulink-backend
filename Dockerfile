@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install
+RUN npm install --force
 
 COPY . .
 
@@ -23,7 +23,7 @@ COPY --from=build /user/src/app/dist ./dist
 
 COPY package*.json ./
 
-RUN npm install --only=production
+RUN npm install  --force --only=production
 
 RUN rm package*.json
 
