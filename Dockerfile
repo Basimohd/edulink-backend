@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 #prod stage
-FROM node:18-alpine AS build
+FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
