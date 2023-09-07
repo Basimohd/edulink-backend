@@ -13,7 +13,6 @@ async function bootstrap() {
     rawBody: true,
   });
   const corsOptions: CorsOptions = {
-    origin: ['http://localhost:4200'],
     credentials: true,
   };
   app.enableCors(corsOptions);
