@@ -13,9 +13,9 @@ async function bootstrap() {
     rawBody: true,
   });
   const corsOptions: CorsOptions = {
-    origin: true,
+    origin: ['http://localhost:4200'],
     credentials: true,
-  };  
+  };
   app.enableCors(corsOptions);
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
   app.useGlobalFilters(new GlobalExceptionFilter()); 
