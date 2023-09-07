@@ -35,6 +35,12 @@ export class UserController {
   async gethomeCount(){
       return await this.userService.gethomeCount();
   }
+
+  @Get('departments')
+  async fetchDepartments() {
+      const departments = await this.userService.fetchAllDepartments();
+      return { departments }
+  }
   
   @Post('verifyOtp')
   async verifyOtp(@Body() otpDetails:optDto){

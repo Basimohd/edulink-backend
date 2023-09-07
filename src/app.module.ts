@@ -46,6 +46,7 @@ export class AppModule implements NestModule {
         { path: 'user/loginWithGoogle', method: RequestMethod.POST },
         { path: 'user/webhook', method: RequestMethod.POST },
         { path: 'user/homeCount', method: RequestMethod.GET },
+        { path: 'user/departments', method: RequestMethod.GET },
         { path: 'faculty/register', method: RequestMethod.POST },
         { path: 'faculty/login', method: RequestMethod.POST },
       )
