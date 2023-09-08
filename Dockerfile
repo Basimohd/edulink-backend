@@ -11,6 +11,8 @@ COPY . .
 
 RUN npm run build
 
+COPY common/emails dist/common/emails
+
 #prod stage
 FROM node:18-alpine
 
