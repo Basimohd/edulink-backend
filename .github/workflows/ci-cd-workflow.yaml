@@ -1,29 +1,45 @@
-name: CICD
-
+name: CI/CD
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  build:
-    runs-on: [ubuntu-latest]
+  continuous-integration:
+    runs-on: self-hosted
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
-      - name: Login to docker hub
-        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} 
-      - name: Build docker image
-        run: docker build -t bsimhd/edulink-backend .
-      - name: Publish image to docker hub
-        run: docker push bsimhd/edulink-backend:latest
-        
-  deploy:
-    needs: build
-    runs-on: [aws-ec2]
+      # Step 1
+      - uses: actions/checkout@v2
+
+  continuous-deployment:
+    runs-on: self-hosted
+    needs: [continuous-integration]
+    if: github.ref == 'refs/heads/main'  
     steps:
-      - name: Pull image from docker hub
-        run: docker pull bsimhd/edulink-backend:latest
-      - name: Delete old container
-        run: docker rm -f edulink-backend
-      - name: Run docker container
-        run: docker compose up -d
+     # Step 1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} AKIASTIR46DL2K75POMB 
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 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
+          aws-region: ${{ secrets.AWS_REGION }} 
+     # Step 2
+      - name: Create CodeDeploy Deployment
+      #  id: deploy
+        run: |
+            
+            cd ~/edulink-backend/
+            # if [[ -d "~/edulink-backend" ]]
+            #   then
+            #     sudo rm -rf ~/edulink-backend
+            # fi
+               
+            #  git clone https://github.com/Basimohd/edulink-backend.git
+            #  cd edulink-backend
+            git reset --hard
+            git pull origin main
+              # docker container stop $(docker container ls -aq)
+              # docker rm -f $(docker ps -aq) 
+            docker rmi -f heet
+            docker-compose down
+            docker build -t heet .
+            docker-compose up -d
