@@ -5,20 +5,15 @@ on:
     branches: [main]
 
 jobs:
-  continuous-integration:
+  continuous-deployment:
     runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-  continuous-deployment:
-    runs-on: self-hosted
-    needs: [continuous-integration]
-    if: github.ref == 'refs/heads/main'
-    steps:
+      
       - name: Deploy to Docker
         env:
-          REPO_DIR: ~/edulink-backend
+          REPO_DIR: ${{ github.workspace }}/edulink-backend
         run: |
           # Check if the directory exists, if not, create it
           if [ ! -d "$REPO_DIR" ]; then
@@ -36,5 +31,5 @@ jobs:
           fi
 
           # Restart Docker services
-          docker compose down
-          docker compose up -d
+          docker-compose down
+          docker-compose up -d
