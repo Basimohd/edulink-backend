@@ -24,7 +24,7 @@ jobs:
             echo "File does not exist"
             # Clone the repository if the file doesn't exist
             git clone https://github.com/Basimohd/edulink-backend.git
-            cd temp-folder/edulink-backend
+            cd edulink-backend
             # Run the docker-compose command
             docker compose up -d
           fi
