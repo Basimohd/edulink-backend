@@ -26,7 +26,7 @@ jobs:
             git clone https://github.com/Basimohd/edulink-backend.git temp-folder
             cd temp-folder
             # Run the docker-compose command
-            docker-compose up -d
+            docker compose up -d
           fi
 
       - name: Cleanup temp folder (if cloned)
