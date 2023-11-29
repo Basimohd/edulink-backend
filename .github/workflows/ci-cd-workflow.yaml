@@ -26,6 +26,6 @@ jobs:
       - name: Delete old container
         run: docker rm -f nestjs_api
       - name: GO the dir
-        run: cd edulink-backend/edulink-backend
+        run: cd ~/actions-runner/_work/edulink-backend/edulink-backend
       - name: Run docker compose
         run: docker compose up -d
