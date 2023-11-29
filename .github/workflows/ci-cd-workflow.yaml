@@ -25,7 +25,7 @@ jobs:
         run: docker pull bsimhd/nestjs_api:latest
       - name: Delete old container
         run: docker rm -f nestjs_api
-      - name: docker run bsimhd/nestjs_api
-        run: cd ~/actions-runner/_work/edulink-backend/edulink-backend
+      - name: run container
+        run: docker run bsimhd/nestjs_api
       - name: Run docker compose
         run: docker compose -f ~/docker-compose.yaml up -d
