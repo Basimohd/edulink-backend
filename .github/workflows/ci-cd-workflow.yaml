@@ -13,23 +13,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Check if file exists
-        run: |
-          FILE_PATH="edulink-backend"  # Specify the path to the file
-          if [ -f "$FILE_PATH" ]; then
-            echo "File exists"
-            # Perform actions to update the file
-            # Example: Use commands to update the file content
-          else
-            echo "File does not exist"
-            # Clone the repository if the file doesn't exist
-            git clone https://github.com/Basimohd/edulink-backend.git
-            cd edulink-backend/edulink-backend
-            # Run the docker-compose command
-            docker compose up -d
-          fi
+      - name: rsync deployments 
+        uses: burnett01/rsync-deployments@5.1
+        with:
+          switches: -avzr --delete
+          path: ./*
+          remote_host: <host>.compute.amazonaws.com
+          remote_user: ubuntu
+          remote_key: "${{ secrets.SSH_PRIVATE_KEY }}"
 
-      - name: Cleanup temp folder (if cloned)
-        if: ${{ !success() }}  # Clean up only if the file was not found and repository was cloned
+      - name: run docker
         run: |
-          rm -rf temp-folder  # Remove the cloned repository if created
+          cd ~/edulink-backend
+          docker compose up -d
