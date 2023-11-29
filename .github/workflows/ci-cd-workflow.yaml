@@ -20,17 +20,17 @@ jobs:
         run: |
             mkdir ~/edulink-backend
             cd ~/edulink-backend/
-            # if [[ -d "~/edulink-backend" ]]
-            #   then
-            #     sudo rm -rf ~/edulink-backend
-            # fi
+            if [[ -d "~/edulink-backend" ]]
+              then
+                sudo rm -rf ~/edulink-backend
+            fi
                
-            #  git clone https://github.com/Basimohd/edulink-backend.git
-            #  cd edulink-backend
+             git clone https://github.com/Basimohd/edulink-backend.git
+             cd edulink-backend
             git reset --hard
             git pull origin main
-              # docker container stop $(docker container ls -aq)
-              # docker rm -f $(docker ps -aq) 
+              docker container stop $(docker container ls -aq)
+              docker rm -f $(docker ps -aq) 
             docker rmi -f heet
             docker-compose down
             docker build -t heet .
