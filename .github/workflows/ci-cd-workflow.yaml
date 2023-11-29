@@ -15,15 +15,6 @@ jobs:
     needs: [continuous-integration]
     if: github.ref == 'refs/heads/main'  
     steps:
-     # Step 1
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} AKIASTIR46DL2K75POMB 
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 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
-          aws-region: ${{ secrets.AWS_REGION }} 
-     # Step 2
-      - name: Create CodeDeploy Deployment
       #  id: deploy
         run: |
             
