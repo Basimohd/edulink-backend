@@ -1,31 +1,40 @@
 name: CI/CD
+
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   continuous-integration:
     runs-on: self-hosted
     steps:
-      # Step 1
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
   continuous-deployment:
     runs-on: self-hosted
     needs: [continuous-integration]
-    if: github.ref == 'refs/heads/main'  
+    if: github.ref == 'refs/heads/main'
     steps:
-      - name: Create CodeDeploy Deployment
-      #  id: deploy
+      - name: Deploy to Docker
+        env:
+          REPO_DIR: ~/edulink-backend
         run: |
-            cd ~/edulink-backend/
-            # if [[ -d "~/edulink-backend" ]]
-            #   then
-            #     sudo rm -rf ~/edulink-backend
-            # fi
-               
-             git clone https://github.com/Basimohd/edulink-backend.git
-             cd edulink-backend
+          # Check if the directory exists, if not, create it
+          if [ ! -d "$REPO_DIR" ]; then
+            mkdir -p "$REPO_DIR"
+          fi
+
+          cd "$REPO_DIR"
+          
+          # If the directory exists, clean and update the code
+          if [ -d ".git" ]; then
             git reset --hard
             git pull origin main
-            docker-compose up -d
+          else
+            git clone https://github.com/Basimohd/edulink-backend.git .
+          fi
+
+          # Restart Docker services
+          docker-compose down
+          docker-compose up -d
