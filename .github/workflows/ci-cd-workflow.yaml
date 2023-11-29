@@ -2,27 +2,28 @@ name: CICD
 
 on:
   push:
-    branches: [main]
-
+    branches: [cicd-docker-ec2]
 
 jobs:
-  update-and-run:
-    runs-on: self-hosted  # Replace with your AWS EC2 runner configuration
-    
+  build:
+    runs-on: [ubuntu-latest]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: rsync deployments 
-        uses: burnett01/rsync-deployments@5.1
-        with:
-          switches: -avzr --delete
-          path: ./*
-          remote_host: <host>.compute.amazonaws.com
-          remote_user: ubuntu
-          remote_key: "${{ secrets.SSH_PRIVATE_KEY }}"
-
-      - name: run docker
-        run: |
-          cd ~/edulink-backend
-          docker compose up -d
+      - name: Checkout source
+        uses: actions/checkout@v3
+      - name: Login to docker hub
+        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} 
+      - name: Build docker image
+        run: docker build -t bsimhd/edulink-backend .
+      - name: Publish image to docker hub
+        run: docker push bsimhd/nestjs_api:latest
+        
+  deploy:
+    needs: build
+    runs-on: [aws-ec2]
+    steps:
+      - name: Pull image from docker hub
+        run: docker pull bsimhd/nestjs_api:latest
+      - name: Delete old container
+        run: docker rm -f nestjs_api
+      - name: Run docker compose
+        run: docker compose up -d
