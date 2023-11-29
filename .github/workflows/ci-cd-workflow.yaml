@@ -1,35 +1,35 @@
-name: CI/CD
+name: CICD
 
 on:
   push:
     branches: [main]
 
+
 jobs:
-  continuous-deployment:
-    runs-on: self-hosted
+  update-and-run:
+    runs-on: self-hosted  # Replace with your AWS EC2 runner configuration
+    
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v2
-      
-      - name: Deploy to Docker
-        env:
-          REPO_DIR: ${{ github.workspace }}/edulink-backend
+
+      - name: Check if file exists
         run: |
-          # Check if the directory exists, if not, create it
-          if [ ! -d "$REPO_DIR" ]; then
-            mkdir -p "$REPO_DIR"
-          fi
-
-          cd "$REPO_DIR"
-          
-          # If the directory exists, clean and update the code
-          if [ -d ".git" ]; then
-            git reset --hard
-            git pull origin main
+          FILE_PATH="path/to/your/file"  # Specify the path to the file
+          if [ -f "$FILE_PATH" ]; then
+            echo "File exists"
+            # Perform actions to update the file
+            # Example: Use commands to update the file content
           else
-            git clone https://github.com/Basimohd/edulink-backend.git .
+            echo "File does not exist"
+            # Clone the repository if the file doesn't exist
+            git clone https://github.com/your-username/your-repo.git temp-folder
+            cd temp-folder
+            # Run the docker-compose command
+            docker-compose up -d
           fi
 
-          # Restart Docker services
-          docker compose down
-          docker compose up -d
+      - name: Cleanup temp folder (if cloned)
+        if: ${{ !success() }}  # Clean up only if the file was not found and repository was cloned
+        run: |
+          rm -rf temp-folder  # Remove the cloned repository if created
