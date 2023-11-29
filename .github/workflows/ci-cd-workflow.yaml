@@ -28,4 +28,4 @@ jobs:
       - name: GO the dir
         run: cd ~/actions-runner/_work/edulink-backend/edulink-backend
       - name: Run docker compose
-        run: docker compose up -d
+        run: docker-compose -f ~/docker-compose.yaml up -d
