@@ -26,4 +26,4 @@ jobs:
       - name: Delete old container
         run: docker rm -f edulink-backend
       - name: Run docker container
-        run: docker-compose up -d
+        run: docker compose up -d
