@@ -36,5 +36,5 @@ jobs:
           fi
 
           # Restart Docker services
-          docker-compose down
-          docker-compose up -d
+          docker compose down
+          docker compose up -d
