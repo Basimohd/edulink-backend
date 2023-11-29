@@ -19,10 +19,10 @@ jobs:
       #  id: deploy
         run: |
             cd ~/edulink-backend/
-            if [[ -d "~/edulink-backend" ]]
-              then
-                sudo rm -rf ~/edulink-backend
-            fi
+            # if [[ -d "~/edulink-backend" ]]
+            #   then
+            #     sudo rm -rf ~/edulink-backend
+            # fi
                
              git clone https://github.com/Basimohd/edulink-backend.git
              cd edulink-backend
