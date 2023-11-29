@@ -28,9 +28,4 @@ jobs:
              cd edulink-backend
             git reset --hard
             git pull origin main
-              docker container stop $(docker container ls -aq)
-              docker rm -f $(docker ps -aq) 
-            docker rmi -f heet
-            docker-compose down
-            docker build -t heet .
             docker-compose up -d
