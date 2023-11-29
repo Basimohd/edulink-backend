@@ -18,7 +18,6 @@ jobs:
       - name: Create CodeDeploy Deployment
       #  id: deploy
         run: |
-            mkdir ~/edulink-backend
             cd ~/edulink-backend/
             if [[ -d "~/edulink-backend" ]]
               then
