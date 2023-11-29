@@ -26,4 +26,4 @@ jobs:
       - name: Delete old container
         run: docker rm -f edulink-backend
       - name: Run docker container
-        run: docker run -d -p 3000:3000 --name edulink-backend bsimhd/edulink-backend
+        run: docker-compose up -d
